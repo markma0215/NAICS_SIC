@@ -19,12 +19,13 @@ def file_reader():
 
 
 def file_wirter(str_list):
-    with open("output_file.csv", "a") as csv_file:
+    with open("output_file.csv", "ab") as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         writer.writerow(str_list)
 
 
 def requestHTMLPage(url):
+    time.sleep(random.randint(3, 7))
     status = False
     times = 0
     html_page = ""
@@ -92,20 +93,24 @@ def parser_specific_company(link, tenant_name, zip):
 
     zip_rule = config.specific_company.get("zip")
     zip_code = parser_map[zip_rule[0]](soup, zip_rule[1][0], zip_rule[1][1]).string.strip()
-    if zip_code != zip:
-        return False
+    # if zip_code != zip:
+    #     return False
 
     NAICS_code_rule = config.specific_company.get("NAICS")
     NAICS_code = parser_map[NAICS_code_rule[0]](soup, NAICS_code_rule[1][0], NAICS_code_rule[1][1]).string.strip()
     NAICS_code = NAICS_code.split(" - ")[0].strip()
     print "the code is: %s " % NAICS_code
 
-    return NAICS_code
+    return NAICS_code, zip_code
 
 
 def parse_search_table(soup, tenant_name, city_state, zip):
+    find_same_company = False
     elements_property = config.search_table[0]
     elements = parser_map[elements_property[0]](soup, elements_property[1][0], elements_property[1][1])
+    if not elements:
+        elements = parser_map[elements_property[0]](soup, elements_property[1][0], elements_property[1][2])
+
     name_property = config.search_table[1].get("name")
     state_city = config.search_table[1].get("state_city")
     for each_element in elements:
@@ -116,21 +121,28 @@ def parse_search_table(soup, tenant_name, city_state, zip):
 
         company_state_city_tag = parser_map[state_city[0]](each_element, state_city[1][0], state_city[1][1])
         company_state_city = parser_map[state_city[2]](company_state_city_tag).strip()
-        if company_state_city != city_state:
-            continue
+        # if company_state_city != city_state:
+        #     continue
 
         link_property = config.search_table[1].get("link")
         link_tag = parser_map[link_property[2]](each_element)
         link = parser_map[link_property[3]](link_tag)
-        if link:
-            return parser_specific_company(link, tenant_name, zip)
+        # if link:
+        #     return parser_specific_company(link, tenant_name, zip)
 
+        if link:
+            N_code, zip_code = parser_specific_company(link, tenant_name, zip)
+
+            result = [city_state.split(", ")[0], city_state.split(", ")[1], zip, tenant_name,
+                      company_state_city.split(", ")[0], company_state_city.split(", ")[1], zip_code, company_name, N_code]
+            file_wirter(result)
+            find_same_company = True
         else:
-            print "company matched, however website does not provide no link"
+            print "company matched, however website does not provide link"
             sys.exit(1)
 
-    return False
-
+    # return False
+    return find_same_company
 
 def main():
     inputData = file_reader()
@@ -146,6 +158,7 @@ def main():
 
         print "Current matched number is %s, unmatched number is %s" % (config.matched, config.unmatched)
         print "NO. %s company, the tenant name is %s" % (config.counter, tenant_name)
+        tenant_name = tenant_name.replace("-", "").replace("'", "").replace(".", "").replace("|", "").replace('"', "").strip()
         html_page = requestHTMLPage(composite_url(tenant_name))
 
         soup = BeautifulSoup(html_page, 'html.parser')
@@ -154,16 +167,19 @@ def main():
             config.counter = config.counter + 1
             continue
 
-        code = parse_search_table(soup, tenant_name, city_state, zip)
-        if code:
+        # code = parse_search_table(soup, tenant_name, city_state, zip)
+        # if code:
+            # config.matched = config.matched + 1
+            # result = [city, state, zip, tenant_name, code]
+            # file_wirter(result)
+        result = parse_search_table(soup, tenant_name, city_state, zip)
+        if result:
             config.matched = config.matched + 1
-            result = [city, state, zip, tenant_name, code]
-            file_wirter(result)
         else:
             config.unmatched = config.unmatched + 1
 
         config.counter = config.counter + 1
-        time.sleep(random.randint(1, 3))
+
 
 if __name__ == "__main__":
     main()
