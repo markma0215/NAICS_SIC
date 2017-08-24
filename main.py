@@ -18,8 +18,14 @@ def file_reader():
     return input_data
 
 
-def file_wirter(str_list):
-    with open("output_file.csv", "ab") as csv_file:
+def file_writer_matched(str_list):
+    with open("matched_file.csv", "ab") as csv_file:
+        writer = csv.writer(csv_file, delimiter=',')
+        writer.writerow(str_list)
+
+
+def file_writer_unmatched(str_list):
+    with open("no_matched.csv", "ab") as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         writer.writerow(str_list)
 
@@ -104,7 +110,7 @@ def parser_specific_company(link, tenant_name, zip):
     return NAICS_code, zip_code
 
 
-def parse_search_table(soup, tenant_name, city_state, zip):
+def parse_search_table(soup, tenant_name, city_state, zip, url_name):
     find_same_company = False
     elements_property = config.search_table[0]
     elements = parser_map[elements_property[0]](soup, elements_property[1][0], elements_property[1][1])
@@ -132,10 +138,22 @@ def parse_search_table(soup, tenant_name, city_state, zip):
 
         if link:
             N_code, zip_code = parser_specific_company(link, tenant_name, zip)
+            if city_state.split(", ")[0] == company_state_city.split(", ")[0]:
+                same_city = 1
+            else:
+                same_city = 0
+
+            if city_state.split(", ")[1] == company_state_city.split(", ")[1]:
+                same_state = 1
+            else:
+                same_state = 0
 
             result = [city_state.split(", ")[0], city_state.split(", ")[1], zip, tenant_name,
-                      company_state_city.split(", ")[0], company_state_city.split(", ")[1], zip_code, company_name, N_code]
-            file_wirter(result)
+                      company_state_city.split(", ")[0], company_state_city.split(", ")[1], zip_code,
+                      company_name, N_code, same_city, same_state, url_name]
+
+            file_writer_matched(result)
+
             find_same_company = True
         else:
             print "company matched, however website does not provide link"
@@ -144,27 +162,34 @@ def parse_search_table(soup, tenant_name, city_state, zip):
     # return False
     return find_same_company
 
+
 def main():
     inputData = file_reader()
+    # print inputData
 
     for i in range(config.counter, len(inputData)):
-        this_row = inputData[i][0]
+        this_row = inputData[i]
 
-        city = this_row.split('\t')[0]
-        state = this_row.split('\t')[1]
-        zip = this_row.split('\t')[2]
-        tenant_name = this_row.split('\t')[3]
+        city = this_row[0]
+        state = this_row[1]
+        zip = this_row[2]
+        tenant_name = this_row[3]
         city_state = city + ", " + state
 
         print "Current matched number is %s, unmatched number is %s" % (config.matched, config.unmatched)
         print "NO. %s company, the tenant name is %s" % (config.counter, tenant_name)
-        tenant_name = tenant_name.replace("-", "").replace("'", "").replace(".", "").replace("|", "").replace('"', "").strip()
-        html_page = requestHTMLPage(composite_url(tenant_name))
+        url_name = tenant_name.replace("-", "").replace("'", "").replace(".", "")\
+            .replace("|", "").replace('"', "").replace(",", "").replace("+", "")\
+            .replace("&", "").replace('/', " ").strip()
+
+        html_page = requestHTMLPage(composite_url(url_name))
 
         soup = BeautifulSoup(html_page, 'html.parser')
         if has_no_result(soup):
             config.unmatched = config.unmatched + 1
             config.counter = config.counter + 1
+            no_matched_list = [city, state, zip, tenant_name]
+            file_writer_unmatched(no_matched_list)
             continue
 
         # code = parse_search_table(soup, tenant_name, city_state, zip)
@@ -172,11 +197,14 @@ def main():
             # config.matched = config.matched + 1
             # result = [city, state, zip, tenant_name, code]
             # file_wirter(result)
-        result = parse_search_table(soup, tenant_name, city_state, zip)
+
+        result = parse_search_table(soup, tenant_name, city_state, zip, url_name)
         if result:
             config.matched = config.matched + 1
         else:
             config.unmatched = config.unmatched + 1
+            no_matched_list = [city, state, zip, tenant_name]
+            file_writer_unmatched(no_matched_list)
 
         config.counter = config.counter + 1
 
