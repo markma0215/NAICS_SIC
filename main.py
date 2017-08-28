@@ -31,7 +31,7 @@ def file_writer_unmatched(str_list):
 
 
 def requestHTMLPage(url):
-    time.sleep(random.randint(3, 7))
+    time.sleep(random.randint(1, 5))
     status = False
     times = 0
     html_page = ""
@@ -92,7 +92,10 @@ def parser_specific_company(link, tenant_name, zip):
     soup = BeautifulSoup(specific_html_page, "html.parser")
     company_name_rule = config.specific_company.get("company_name")
     company_name_tag = parser_map[company_name_rule[0]](soup, company_name_rule[1][0], company_name_rule[1][1])
-    company_name = parser_map[company_name_rule[2]](company_name_tag).string.strip()
+    if company_name_tag is None:
+        company_name = soup.select_one("div > h1 > span").string.strip()
+    else:
+        company_name = parser_map[company_name_rule[2]](company_name_tag).string.strip()
     if tenant_name != company_name:
         print "company name is %s " % company_name
         sys.exit(1)
@@ -103,7 +106,12 @@ def parser_specific_company(link, tenant_name, zip):
     #     return False
 
     NAICS_code_rule = config.specific_company.get("NAICS")
-    NAICS_code = parser_map[NAICS_code_rule[0]](soup, NAICS_code_rule[1][0], NAICS_code_rule[1][1]).string.strip()
+    NAICS_code_ele = parser_map[NAICS_code_rule[0]](soup, NAICS_code_rule[1][0], NAICS_code_rule[1][1])
+    if NAICS_code_ele is None:
+        NAICS_code = soup.select_one("div > dl  > dd > ul > li > a .left").string.strip()
+    else:
+        NAICS_code = NAICS_code_ele.string.strip()
+
     NAICS_code = NAICS_code.split(" - ")[0].strip()
     print "the code is: %s " % NAICS_code
 
