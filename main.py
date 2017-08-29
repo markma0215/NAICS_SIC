@@ -31,7 +31,7 @@ def file_writer_unmatched(str_list):
 
 
 def requestHTMLPage(url):
-    time.sleep(random.randint(1, 5))
+    time.sleep(random.randint(1, 3))
     status = False
     times = 0
     html_page = ""
