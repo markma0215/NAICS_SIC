@@ -31,7 +31,8 @@ def file_writer_unmatched(str_list):
 
 
 def requestHTMLPage(url):
-    time.sleep(random.randint(1, 7))
+    # time.sleep(random.randint(1, 3))
+    # time.sleep(1)
     status = False
     times = 0
     html_page = ""
@@ -188,7 +189,7 @@ def main():
         print "NO. %s company, the tenant name is %s" % (config.counter, tenant_name)
         url_name = tenant_name.replace("-", "").replace("'", "").replace(".", "")\
             .replace("|", "").replace('"', "").replace(",", "").replace("+", "")\
-            .replace("&", "").replace('/', " ").strip()
+            .replace("&", "").replace('/', " ").replace('(', "").replace(')', "").strip()
 
         html_page = requestHTMLPage(composite_url(url_name))
 
