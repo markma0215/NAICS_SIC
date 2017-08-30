@@ -2,9 +2,9 @@
 # matched = 228
 # unmatched = 2980
 # counter = 3209
-matched = 2584
-unmatched = 7040
-counter = 9625
+matched = 2661
+unmatched = 7261
+counter = 9923
 url_base = "http://siccode.com/en/search/"
 
 # search_result
